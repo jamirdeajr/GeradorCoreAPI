@@ -1,0 +1,125 @@
+﻿using [nomeAPI];
+using [nomeAPI].Model;
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace [nomeAPI].Model
+{ 
+    /// <summary>
+    /// Classe de retorno de resultado genérica
+    /// </summary>
+    public class GenericResult
+    {
+        #region Retorno Paginado
+        /// <summary>
+        /// Numero total de registros
+        /// </summary>
+        [JsonProperty("paginationcount")]
+        public long PaginationCount { get; set; }
+
+        /// <summary>
+        /// Número da página retornada 
+        /// </summary>
+
+        [JsonProperty("paginationpage")]
+        public long PaginationPage { get; set; }
+
+        /// <summary>
+        /// Número de itens por página
+        /// </summary>
+
+        [JsonProperty("paginationlimit")]
+        public long PaginationLimit { get; set; }
+
+
+        /// <summary>
+        /// Lista de Objetos retornados
+        /// </summary>
+        [JsonProperty("itens")]
+        public IList<object> Itens { get; set; }
+
+        /// <summary>
+        /// Objeto retornado
+        /// </summary>
+        [JsonProperty("item")]
+        public object Item { get; set; }
+        
+        #endregion
+
+        /// <summary>
+        /// Status do Resultado
+        /// </summary>
+        [JsonProperty("status")]
+        public string Status { get; set; }
+
+        /// <summary>
+        /// Lista de Mensagens
+        /// </summary>
+        [JsonProperty("mensagens")]
+        public IList<MensagemModel> Mensagens { get; set; }
+
+
+
+        #region Construtor
+        /// <summary>
+        /// Construtor
+        /// </summary>
+        public GenericResult()
+        {
+            Status = "OK";
+            Mensagens = new List<MensagemModel>();
+        }
+
+        #endregion
+
+        #region Mensagens
+        /// <summary>
+        /// MensagemStr em string com quebras de linhas
+        /// </summary>
+        /// <returns></returns>
+        
+        protected string MensagemStr()
+        {
+            if (Mensagens != null && Mensagens.Count > 0)
+            {
+                StringBuilder sb = new StringBuilder();
+
+                foreach (MensagemModel msg in Mensagens)
+                {
+                    sb.Append(msg.ToString() + "\r\n");
+                }
+
+                return sb.ToString();
+            }
+
+            return "-";
+        }
+
+
+        /// <summary>
+        /// Adiciona mensagem a lista de mensagens do retorno, opção erro = false (default) ou true
+        /// </summary>
+        /// <param name="campo"></param>
+        /// <param name="mensagem"></param>
+        /// <param name="erro"></param>
+        public void AddMensagem(string campo, string mensagem, bool erro = false)
+        {
+            if (Mensagens == null)
+                Mensagens = new List<MensagemModel>();
+
+            Mensagens.Add(new MensagemModel
+            {
+                Campo = campo,
+                Mensagem = mensagem,
+                Erro = erro
+            });
+
+            if (erro)
+                Status = "ERRO";
+        }
+        #endregion
+    }
+
+}

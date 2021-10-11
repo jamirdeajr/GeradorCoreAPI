@@ -1,0 +1,129 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="log4net.config" />
+    <None Remove="Templates\AppSettings_cs.txt" />
+    <None Remove="Templates\appsettings_json.txt" />
+    <None Remove="Templates\GenericResult_cs.txt" />
+    <None Remove="Templates\hibernate.cfg_xml.txt" />
+    <None Remove="Templates\IWritableOptions_cs.txt" />
+    <None Remove="Templates\launchSettings_json.txt" />
+    <None Remove="Templates\log4net_config.txt" />
+    <None Remove="Templates\nomeAPI_csproj.txt" />
+    <None Remove="Templates\nomeAPI_Model_cs.txt" />
+    <None Remove="Templates\Program_cs.txt" />
+    <None Remove="Templates\ServiceCollectionExtensions_cs.txt" />
+    <None Remove="Templates\Startup_cs.txt" />
+    <None Remove="Templates\UserService_cs.txt" />
+    <None Remove="Templates\Versao_cs.txt" />
+    <None Remove="Templates\WritableOptions_cs.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Templates\nomeAPI_Model_cs.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Templates\IWritableOptions_cs.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Templates\ServiceCollectionExtensions_cs.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Templates\WritableOptions_cs.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Templates\GenericResult_cs.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Templates\AppSettings_cs.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Templates\hibernate.cfg_xml.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="Templates\nomeAPI_csproj.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Templates\Program_cs.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Templates\Startup_cs.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Templates\UserService_cs.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Templates\Versao_cs.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="log4net.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="Templates\appsettings_json.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="Templates\launchSettings_json.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>Never</CopyToPublishDirectory>
+    </Content>
+    <Content Include="Templates\log4net_config.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+  
+    <ItemGroup>
+      <PackageReference Include="Easy.Logger" Version="3.7.5" />
+      <PackageReference Include="Easy.Logger.Extensions" Version="1.5.0" />
+      <PackageReference Include="Easy.Logger.Extensions.Microsoft" Version="2.1.1" />
+      <PackageReference Include="Easy.Logger.Interfaces" Version="1.3.1" />
+      <PackageReference Include="log4net" Version="2.0.12" />
+      <PackageReference Include="log4net.Extensions.AspNetCore" Version="1.0.0" />
+      <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="3.1.13" />
+      <PackageReference Include="Microsoft.Extensions.ApiDescription.Client" Version="3.0.0">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
+      <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0" />
+      <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+      <PackageReference Include="NSwag.ApiDescription.Client" Version="13.0.5">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
+      
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Templates\ControllerGenerico_cs.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Templates\NegocioBase_cs.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

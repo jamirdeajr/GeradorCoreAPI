@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<hibernate-configuration xmlns="urn:nhibernate-configuration-2.2">
+  <session-factory name="Interno">
+    
+    
+    <property name="connection.provider">NHibernate.Connection.DriverConnectionProvider</property>
+    <property name="dialect">NHibernate.Dialect.MsSql2012Dialect</property>
+    <property name="connection.driver_class">NHibernate.Driver.SqlClientDriver</property>
+    <property name="connection.connection_string">Server=localhost;Initial Catalog=[nomeAPI];User Id=root;Password=segredo</property>
+    <property name="default_schema">[nomeAPI].dbo</property>
+    <property name="connection.isolation">ReadUncommitted</property>
+    <property name="show_sql">true</property>
+    <property name="format_sql">true</property>
+    <property name="cache.use_query_cache">false</property>
+    <property name="adonet.batch_size">100</property>
+    <property name="command_timeout">0</property>
+    <mapping assembly="Nucleo_Hibernate_Genesis" />
+  
+  </session-factory>
+  
+</hibernate-configuration>
+
+
+

@@ -1,0 +1,25 @@
+﻿using System;
+
+namespace [nomeAPI]
+{
+    /// <summary>
+    /// Classe para controle de versão
+    /// </summary>
+    public static class Versao
+    {
+        // TO DO - Incluir comentário de alterações relevantes aqui
+
+        // 1.0.[aaaammdd] - Versão inicial [nomeAPI]
+
+        /// <summary>
+        /// Indica versão da [nomeAPI]
+        /// </summary>
+        public static string versao = "1.0.[aaaammdd]";
+        /// <summary>
+        /// Título da versão
+        /// </summary>
+        public static string titulo = "[nomeAPI]";
+    }
+}
+
+

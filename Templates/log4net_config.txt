@@ -1,0 +1,92 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<log4net xsi:noNamespaceSchemaLocation="http://csharptest.net/downloads/schema/log4net.xsd"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+  <!-- Appenders WebAPI -->
+  <appender name="ConsoleAppender" type="log4net.Appender.ConsoleAppender">
+    <layout type="log4net.Layout.PatternLayout">
+      <param name="ConversionPattern" value="%d %p %m%n"/>
+    </layout>
+  </appender>
+  <appender name="RollingFile" type="log4net.Appender.FileAppender">
+    <file type="log4net.Util.PatternString" value="Logs\\%date{yyyy}_%date{MM}\\Log_[%processid]_All.txt" />
+    <layout type="log4net.Layout.PatternLayout">
+      <conversionPattern value="%-5p %d{HH:mm:ss} %message%newline" />
+    </layout>
+  </appender>
+  <appender name="Log1Appender" type="log4net.Appender.RollingFileAppender">
+    <file type="log4net.Util.PatternString" value="Logs\\%date{yyyy}_%date{MM}\\Log_[%processid]_Geral.txt" />
+    <datePattern value=".yyyy-MM-dd'.txt'" />
+    <lockingModel type="log4net.Appender.FileAppender+MinimalLock" />
+    <rollingStyle value="Composite" />
+    <appendToFile value="true" />
+    <maxSizeRollBackups value="5" />
+    <maximumFileSize value="50MB" />
+    <layout type="log4net.Layout.PatternLayout">
+      <conversionPattern value="%d %p %m%n" />
+    </layout>
+  </appender>
+  <appender name="Log2Appender" type="log4net.Appender.RollingFileAppender">
+    <file type="log4net.Util.PatternString" value="Logs\\%date{yyyy}_%date{MM}\\Log_Atividade.txt" />
+    <datePattern value=".yyyy-MM-dd'.txt'" />
+    <lockingModel type="log4net.Appender.FileAppender+MinimalLock" />
+    <rollingStyle value="Composite" />
+    <appendToFile value="true" />
+    <layout type="log4net.Layout.PatternLayout">
+      <conversionPattern value="%d %p %m%n" />
+    </layout>
+  </appender>
+  <appender name="Log3Appender" type="log4net.Appender.RollingFileAppender">
+    <file type="log4net.Util.PatternString" value="Logs\\%date{yyyy}_%date{MM}\\Log_[%processid]_Persistencia.txt" />
+    <datePattern value=".yyyy-MM-dd'.txt'" />
+    <lockingModel type="log4net.Appender.FileAppender+MinimalLock" />
+    <rollingStyle value="Composite" />
+    <appendToFile value="true" />
+    <maxSizeRollBackups value="5" />
+    <maximumFileSize value="50MB" />
+    <layout type="log4net.Layout.PatternLayout">
+      <conversionPattern value="%d %p %m%n" />
+    </layout>
+  </appender>
+  
+  <appender name="Log4Appender" type="log4net.Appender.RollingFileAppender">
+    <file type="log4net.Util.PatternString" value="Logs\\%date{yyyy}_%date{MM}\\Log_Resumo.txt" />
+    <datePattern value=".yyyy-MM-dd'.txt'" />
+    <lockingModel type="log4net.Appender.FileAppender+MinimalLock" />
+    <rollingStyle value="Composite" />
+    <appendToFile value="true" />
+    <layout type="log4net.Layout.PatternLayout">
+      <conversionPattern value="%d %p %m%n" />
+    </layout>
+  </appender>
+
+  <!-- Loggers WebAPI -->
+  <root>
+    <level value="ALL" />
+    <appender-ref ref="RollingFile" />
+  </root>
+  <logger name="[nomeAPI]" additivity="false">
+    <level value="DEBUG" />
+    <appender-ref ref="Log1Appender" />
+  </logger>
+  <logger name="Negocio[siglaAPI]" additivity="false">
+    <level value="DEBUG" />
+    <appender-ref ref="Log1Appender" />
+  </logger>
+  <logger name="LogAtividade">
+    <level value="ALL" />
+    <appender-ref ref="Log2Appender" />
+  </logger>
+  <logger name="LogResumo">
+    <level value="ALL" />
+    <appender-ref ref="Log4Appender" />
+  </logger>
+  <logger name="NHibernate" additivity="false">
+    <level value="DEBUG" />
+    <appender-ref ref="Log3Appender" />
+  </logger>
+  <logger name="NHibernate.SQL" additivity="false">
+    <level value="DEBUG" />
+    <appender-ref ref="Log3Appender" />
+  </logger>
+</log4net>

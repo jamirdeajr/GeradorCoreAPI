@@ -1,0 +1,170 @@
+﻿
+using [nomeAPI].Helpers;
+using [nomeAPI].Model;
+using [nomeAPI].Negocio;
+using [nomeAPI].Services;
+
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Logging;
+using System;
+using System.IO;
+using System.Security.Claims;
+using System.Security.Principal;
+using System.Threading;
+using NPOI.HSSF.UserModel;
+
+namespace [nomeAPI].Controllers
+{
+	/// <summary>
+	/// Classe Controller Generico -  Obs Ver porque entidade precisa ter prefixo, ex Nucleo_Hibernate_Filmes.Ator vs somente Ator não ok
+	/// </summary>
+	
+	[Authorize]
+	public partial class [nomeAPI]Controller 
+	{
+
+		#region SearchGenerico
+		/// <summary>
+		/// SearchGenerico
+		/// </summary>
+		/// <param name="entidade">Entidade - Nome da classe mapeada no ORM NHibernate</param>
+		/// <param name="hqlParams">
+		/// fields = Campos a retornar separados por virgula ou vazio se todos
+		/// where = Opcional: Condições - sintaxe hql
+		/// orderby = Opcional: Ordenação </param>
+		/// <param name="inicio">Opcional: Paginação - registro inicial </param>
+		/// <param name="numeroRegistros">Opcional: Paginação - número máximo de registros a retornar</param>
+		/// <returns></returns>
+		/// <returns></returns>
+		[Route("/api/{entidade}/search")]
+		[HttpPost]
+		#if DEBUG
+		[AllowAnonymous]
+		#endif
+		public GenericResult SearchGenerico(string entidade, int inicio, int numeroRegistros, [FromBody] HQLParams hqlParams) {
+
+			return negocio.SearchGenerico(entidade, hqlParams?.fields, hqlParams?.where, hqlParams?.orderby, inicio, numeroRegistros);
+		}
+		#endregion
+
+		#region QueryGenericoSQL
+		/// <summary>
+		/// QueryGenericoSQL
+		/// </summary>
+		/// <param name="sqlParams"></param>
+		/// <returns></returns>
+		[Route("/api/querysql")]
+		[HttpPost]
+		#if DEBUG
+		[AllowAnonymous]
+		#endif
+		public GenericResult QueryGenericoSQL([FromBody] SQLParams sqlParams)
+		{
+
+			return negocio.QueryGenericoSQL(sqlParams?.query, sqlParams?.orderby);
+		}
+		#endregion
+
+		#region GetGenerico
+		/// <summary>
+		/// GetGenerico - Busca por entidade
+		/// </summary>
+		/// <param name="entidade">Entidade - Nome da classe mapeada no ORM NHibernate</param>
+		/// <param name="id">Campo id, chave única</param>
+		/// <param name="fields">Campos a retornar separados por virgula ou vazio se todos</param>
+		/// <returns></returns>
+		[Route("/api/{entidade}/{id}")]
+		[HttpGet]
+		#if DEBUG
+		[AllowAnonymous]
+		#endif
+		public GenericResult GetGenerico(string entidade, decimal id, string fields)
+		{
+			return negocio.GetGenerico(entidade, id, fields);
+		}
+		#endregion
+
+		/// <summary>
+		/// HQLParams
+		/// </summary>
+		public class HQLParams
+        {
+			/// <summary>
+			/// Campos a retornar separados por virgula ou vazio se todos
+			/// </summary>
+			public string fields { get; set; }
+			/// <summary>
+			/// Opcional: Condições - sintaxe hql
+			/// </summary>
+			public string where { get; set; }
+			/// <summary>
+			/// Opcional: Ordenação
+			/// </summary>
+			public string orderby { get; set; }
+		}
+
+		/// <summary>
+		/// SQLParams
+		/// </summary>
+		public class SQLParams
+        {
+			/// <summary>
+			/// Query completa, se passar orderby separado será feito append
+			/// </summary>
+			public string query { get; set; }
+
+			/// <summary>
+			/// Opcional: Ordenação
+			/// </summary>
+			public string orderby { get; set; }
+		}
+
+		#region Excel
+		/// <summary>
+		/// ExcelGenerico
+		/// </summary>
+		/// <param name="entidade">Entidade - Nome da classe mapeada no ORM NHibernate</param>
+		/// <param name="hqlParams">
+		/// fields = Campos a retornar separados por virgula ou vazio se todos
+		/// where = Opcional: Condições - sintaxe hql
+		/// orderby = Opcional: Ordenação 
+		/// </param>
+		/// <returns></returns>
+		[Route("/api/{entidade}/excel")]
+		[HttpPost]
+#if DEBUG
+		[AllowAnonymous]
+#endif
+		public IActionResult ExcelGenerico(string entidade, [FromBody] HQLParams hqlParams /*string fields, string where, string orderby*/)
+		{
+			HSSFWorkbook workbook = negocio.ExcelGenerico(entidade, hqlParams?.fields, hqlParams?.where, hqlParams?.orderby);
+
+			using (MemoryStream exportData = new MemoryStream())
+			{
+				try
+				{
+					workbook.Write(exportData);
+					string saveAsFileName = string.Format(entidade + "-{0:ddMMyyyy_HHmmss}.xls", DateTime.Now).Replace("/", "-");
+
+					return this.File(
+						fileContents: exportData.ToArray(),
+						contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+
+						// Definindo o nome do download já 
+						// adiciona automaticamente o attachment Content-Disposition header
+						fileDownloadName: saveAsFileName
+					);
+				}
+				catch (Exception e)
+				{
+					log.Error("Exceção ao gerar Excel:", e);
+
+				}
+			}
+
+			return null;
+		}
+		#endregion
+	}
+}

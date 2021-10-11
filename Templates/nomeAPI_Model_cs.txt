@@ -1,0 +1,37 @@
+﻿using System;
+
+using System.ComponentModel.DataAnnotations;
+
+namespace [nomeAPI].Model
+{
+    public class AuthenticateModel
+    {
+        [Required]
+        public string usuario { get; set; }
+
+        [Required]
+        public string senha { get; set; }
+    }
+
+    public class AuthenticateMD5Model
+    {
+        [Required]
+        public string usuario { get; set; }
+
+        [Required]
+        public string senhaMD5 { get; set; }
+    }
+
+    public class MensagemModel
+    {
+        public string Campo { get; set; }
+        public string Mensagem { get; set; }
+
+        public bool Erro { get; set; }
+
+        public override string ToString()
+        {
+            return $"Campo:{Campo ?? ""} Mensagem:{Mensagem ?? ""}";
+        }
+    }
+}

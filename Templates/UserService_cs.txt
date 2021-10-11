@@ -1,0 +1,163 @@
+﻿using [nomeAPI].Helpers;
+using [nomeAPI].Negocio;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+using Nucleo_Geral_Core.Helpers;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
+
+namespace [nomeAPI].Services
+{
+    /// <summary>
+    /// Interface UserService
+    /// </summary>
+    public interface IUserService
+    {
+        /// <summary>
+        /// Authenticate 
+        /// </summary>
+        /// <param name="username"></param>
+        /// <param name="password"></param>
+        /// <returns></returns>
+        Task<UsuarioAPI> Authenticate(string username, string password);
+
+        /// <summary>
+        /// GetByIdUsr
+        /// </summary>
+        /// <param name="Id"></param>
+        /// <returns></returns>
+        Task<UsuarioAPI> GetByIdUsr(int Id);
+    }
+
+    /// <summary>
+    /// Class UsuarioAPI Autenticado
+    /// </summary>
+    public class UsuarioAPI
+    {
+        /// <summary>
+        /// Id
+        /// </summary>
+        public int Id { get; set; }
+        /// <summary>
+        /// UserName
+        /// </summary>
+        public string Username { get; set; }
+
+        /// <summary>
+        /// AddicionalProperties
+        /// </summary>
+        public IList<Dictionary<string,string>> AddicionalProperties { get; set; }
+    }
+
+    /// <summary>
+    /// Class UserService
+    /// </summary>
+    public class UserService : IUserService
+    {
+        private static readonly log4net.ILog log =
+        log4net.LogManager.GetLogger(typeof(Negocio[siglaAPI]BO));
+
+        /// <summary>
+        /// Configuration
+        /// </summary>
+        public IConfiguration Configuration { get; set; }
+
+        /// <summary>
+        /// IWritableOptions AppSettings options
+        /// </summary>
+        public IWritableOptions<AppSettings> options { get; set; }
+        private ServiceProvider provider { get; set; }
+
+        #region Autenticação via tabela Usuários
+        /// <summary>
+        /// Autenticação via tabela Usuários - Alterar - Padrão está aceitando qualquer
+        /// </summary>
+        /// <param name="username"></param>
+        /// <param name="password"></param>
+        /// <returns></returns>
+        public async Task<UsuarioAPI> Authenticate(string username, string password)
+        {
+            try
+            {
+                var builder = new ConfigurationBuilder()
+                        .SetBasePath(Directory.GetCurrentDirectory())
+                        .AddJsonFile("appsettings.json");
+
+                Configuration = builder.Build();
+
+                var services = new ServiceCollection();
+
+                services.ConfigureWritable<AppSettings>(Configuration.GetSection("AppSettings"));
+                ConfigureServices(services);
+
+                provider = services.BuildServiceProvider();
+
+                options = provider.GetService<IWritableOptions<AppSettings>>();
+
+                string passmd5 = CryptPHP.cryptMD5(password);
+
+                Negocio[siglaAPI]BO bo = new Negocio[siglaAPI]BO(options);
+
+                UsuarioAPI usuario = bo.ValidaUsuario(username, passmd5);
+
+                return usuario;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+
+            return null;
+        }
+
+        public async Task<UsuarioAPI> GetByIdUsr(int Id)
+        {
+            var services = new ServiceCollection();
+
+            services.ConfigureWritable<AppSettings>(Configuration.GetSection("AppSettings"));
+            ConfigureServices(services);
+
+            provider = services.BuildServiceProvider();
+
+            options = provider.GetService<IWritableOptions<AppSettings>>();
+
+            return new UsuarioAPI
+            {
+                    Id = 1,
+                    Username = "TESTE"
+            };
+        }
+
+        #endregion
+
+        #region ConfigureServices
+        /// <summary>
+        /// ConfigureServices - UserService
+        /// </summary>
+        
+        public void ConfigureServices(IServiceCollection services)
+        {
+            services.AddSingleton<IConfiguration>(Configuration);
+            services.AddCors();
+
+            services.AddControllers().AddNewtonsoftJson(options =>
+            {
+                var settings = options.SerializerSettings;
+
+                //Quando em produção retirar para economizar espaço - Indented
+                settings.Formatting = Newtonsoft.Json.Formatting.Indented;
+                settings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
+
+                //Não preserva referencias - não atendeu o solicitado
+                settings.PreserveReferencesHandling = Newtonsoft.Json.PreserveReferencesHandling.None;
+
+                //Não retorna nulos
+                settings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore;
+            });
+        }
+        #endregion
+    }
+}

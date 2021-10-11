@@ -1,0 +1,580 @@
+﻿using [nomeAPI].Helpers;
+using [nomeAPI].Model;
+using log4net;
+using NHibernate;
+using NPOI.HSSF.UserModel;
+using Nucleo_Geral_Core;
+using Nucleo_Geral_Core.Negocio;
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Text;
+
+namespace [nomeAPI].Negocio
+{
+	/// <summary>
+	/// Classe negocio Generico - Obs Ver porque entidade precisa ter prefixo, ex Nucleo_Hibernate_Filmes.Ator vs somente Ator não ok
+	/// </summary>
+	public class Negocio[siglaAPI]BO_Base
+	{
+        #region Atributos diversos
+        protected static readonly ILog log = LogManager.GetLogger(typeof(Negocio[siglaAPI]BO));
+        protected static readonly ILog logAtv = LogManager.GetLogger(Assembly.GetCallingAssembly(), "LogAtividade");
+        protected static readonly ILog logResumo = LogManager.GetLogger(Assembly.GetCallingAssembly(), "LogResumo");
+
+        public StringBuilder ultimaMensagem { get; set; }
+
+        protected StringBuilder alerta = null;
+        protected readonly IWritableOptions<AppSettings> _options;
+        protected AppSettings _settings;
+
+        #endregion
+
+        #region _session Hibernate
+        protected ISession _session = null;
+
+        protected ISession Session
+        {
+            get
+            {
+                try
+                {
+                    if (_session == null)
+                    {
+                        _session = NHibernateHelper.OpenSession();
+                    }
+                }
+                catch (Exception e)
+                {
+                    log.Error("Não foi possível abrir sessão NHibernate: ", e);
+                }
+                return _session;
+            }
+            set
+            {
+                _session = value;
+            }
+        }
+        #endregion
+
+        #region Dispose
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_session != null && _session.IsOpen)
+            {
+                log.Info("Fechando sessão hibernate.");
+                _session.Dispose();
+                _session = null;
+            }
+        }
+        #endregion
+
+        #region SearchGenerico/GetGenerico
+        public GenericResult SearchGenerico(string entidade, string fields = null, string where = null, string orderby = null, int inicio = 0, int numeroRegistros = 0)
+        {
+            DateTime logInicio = DateTime.Now;
+            DateTime logFim;
+
+            logAtv.Info($"SearchGenerico:{entidade} fields:'{fields ?? ""}' where:'{where ??""}' ordeby:'{orderby ?? ""}' reg.ini:{inicio} numReg:{numeroRegistros}");
+
+            IList<object> list = new List<object>();
+
+            GenericResult result = new GenericResult
+            {
+                Status = "OK"
+            };
+
+            try
+            {
+				StringBuilder queryCnt = new StringBuilder();
+
+				try
+				{
+					queryCnt.Append($"select count(*) from {entidade} _ent");
+					if (!string.IsNullOrEmpty(where))
+					{
+						queryCnt.Append($" where {where}");
+					}
+					IQuery q0 = Session.CreateQuery(queryCnt.ToString());
+
+					result.PaginationCount = q0.UniqueResult<long>();
+					result.PaginationLimit = numeroRegistros;
+					result.PaginationPage = ((inicio == 0 || numeroRegistros <= 0) ? 1 : (inicio / numeroRegistros) + 1);
+
+
+				} catch(Exception e)
+                {
+					log.Error("SearchGenerico Count", e);
+                }
+
+
+                StringBuilder query = new StringBuilder();
+
+                query.Append("select ");
+
+                if (string.IsNullOrEmpty(fields))
+                    query.Append($" _ent");
+                else
+                    query.Append(fields);
+
+                query.Append($" from {entidade} _ent");
+
+                if (!string.IsNullOrEmpty(where))
+                {
+                    query.Append($" where {where}");
+                }
+
+                if (!string.IsNullOrEmpty(orderby))
+                {
+                    query.Append($" order by {orderby}");
+                }
+
+
+                IQuery q = Session.CreateQuery(query.ToString());
+
+                if (numeroRegistros > 0)
+                {
+                    q.SetFirstResult(inicio);
+                    q.SetMaxResults(numeroRegistros);
+                }
+
+                result.Itens = q.List<object>();
+
+
+                if (result.Itens == null)
+                {
+                    result.AddMensagem("", $"Nenhum(a) {entidade} localizado(a).", true);
+                    result.Status = "ERRO";
+                }
+            }
+            catch (Exception e)
+            {
+                result.AddMensagem("", $"Erro ao buscar {entidade}.", true);
+                result.Status = "ERRO";
+                log.Error($"Erro ao buscar {entidade}.", e);
+            }
+
+            logFim = DateTime.Now;
+            logResumo.Info($"Resumo:SearchGenerico Início:{logInicio.ToString("yyyy/MM/dd HH:mm:ss.fff")} Fim:{logFim.ToString("yyyy/MM/dd HH:mm:ss.fff")} Tempo:{(logFim - logInicio).TotalMilliseconds} Result:{result.Status}");
+
+            return result;
+        }
+
+		/// <summary>
+		/// QueryGenericoSQL
+		/// </summary>
+		/// <param name="querysql"></param>
+		/// <param name="orderby"></param>
+		/// <returns></returns>
+		public GenericResult QueryGenericoSQL(string querysql, string orderby = null)
+		{
+			DateTime logInicio = DateTime.Now;
+			DateTime logFim;
+
+			logAtv.Info($"QueryGenericoSQL:'{querysql}' ordeby:'{orderby ?? ""}'");
+
+			IList<object> list = new List<object>();
+
+			GenericResult result = new GenericResult
+			{
+				Status = "OK"
+			};
+
+			try
+			{
+
+				StringBuilder query = new StringBuilder();
+
+				query.Append(querysql);
+
+				if (!string.IsNullOrEmpty(orderby))
+				{
+					query.Append($" order by {orderby}");
+				}
+
+				ISQLQuery q = Session.CreateSQLQuery(query.ToString());
+
+				result.Itens = q.List<object>();
+
+
+				if (result.Itens == null)
+				{
+					result.AddMensagem("", $"Nenhum registro localizado(a).", true);
+					result.Status = "ERRO";
+				}
+			}
+			catch (Exception e)
+			{
+				result.AddMensagem("", $"Erro ao buscar query.", true);
+				result.Status = "ERRO";
+				log.Error($"Erro ao buscar query sql.", e);
+			}
+
+			logFim = DateTime.Now;
+			logResumo.Info($"Resumo:QueryGenericoSQL Início:{logInicio.ToString("yyyy/MM/dd HH:mm:ss.fff")} Fim:{logFim.ToString("yyyy/MM/dd HH:mm:ss.fff")} Tempo:{(logFim - logInicio).TotalMilliseconds} Result:{result.Status}");
+
+			return result;
+		}
+
+		/// <summary>
+		/// GetGenerico
+		/// </summary>
+		/// <param name="entidade"></param>
+		/// <param name="id"></param>
+		/// <param name="fields"></param>
+		/// <returns></returns>
+        public GenericResult GetGenerico(string entidade, decimal id, string fields = null)
+        {
+            DateTime logInicio = DateTime.Now;
+            DateTime logFim;
+
+            logAtv.Info($"GetGenerico:{entidade} id:{id} fields:'{fields ?? ""}'");
+
+            GenericResult result = new GenericResult
+            {
+                Status = "OK"
+            };
+
+            try
+            {
+                StringBuilder query = new StringBuilder();
+
+                query.Append("select ");
+
+                if (string.IsNullOrEmpty(fields))
+                    query.Append($"_ent");
+                else
+                    query.Append(fields);
+
+                query.Append($" from {entidade} _ent");
+
+                query.Append($" where id=:id");
+
+                IQuery q = Session.CreateQuery(query.ToString());
+
+                q.SetParameter("id", id);
+
+                result.Item = q.UniqueResult<object>();
+
+
+                if (result.Item == null)
+                {
+                    result.AddMensagem("", $"Nenhum(a) {entidade} localizado(a).", true);
+                    result.Status = "ERRO";
+                }
+            }
+            catch (Exception e)
+            {
+                result.AddMensagem("", $"Erro ao buscar {entidade}.", true);
+                result.Status = "ERRO";
+                log.Error($"Erro ao buscar {entidade}.", e);
+            }
+
+            logFim = DateTime.Now;
+            logResumo.Info($"Resumo:GetGenerico Início:{logInicio.ToString("yyyy/MM/dd HH:mm:ss.fff")} Fim:{logFim.ToString("yyyy/MM/dd HH:mm:ss.fff")} Tempo:{(logFim - logInicio).TotalMilliseconds} Result:{result.Status}");
+
+            return result;
+        }
+		#endregion
+
+		
+		#region ExcelGenerico
+
+		public HSSFWorkbook ExcelGenerico(string entidade, string fields = null, string where = null, string orderby = null)
+		{
+			DateTime logInicio = DateTime.Now;
+			DateTime logFim;
+			string Status = "ERRO"; 
+
+			logAtv.Info($"ExcelGenerico:{entidade} fields:'{fields ?? ""}' where:'{where ?? ""}' ordeby:'{orderby ?? ""}'");
+
+			try
+			{
+				StringBuilder query = new StringBuilder();
+
+				query.Append("select ");
+
+				//* pois é SQL e não HQL
+				if (string.IsNullOrEmpty(fields))
+					query.Append($"*");
+				else
+					query.Append(fields);
+
+				query.Append($" from {entidade}");
+
+				if (!string.IsNullOrEmpty(where))
+				{
+					query.Append($" where {where}");
+				}
+
+				if (!string.IsNullOrEmpty(orderby))
+				{
+					query.Append($" order by {orderby}");
+				}
+
+				//IQuery q = Session.CreateQuery(query.ToString());
+				//IList<object> Itens = q.List<object>();
+				//if (result.Itens == null)
+				//{
+				//	result.AddMensagem("", $"Nenhum(a) {entidade} localizado(a).", true);
+				//  result.Status = "ERRO";
+				//}
+
+				Query qry = new Query
+				{
+					useSql = true,
+					shql = query.ToString(),
+					titulo = $"Excel:{entidade} {(string.IsNullOrEmpty(where) ? "" : $"Condições:{where}")}"
+				};
+
+				ExportaExcelGenericoBO excelBO = new ExportaExcelGenericoBO(_session, qry, null, null, null, false);
+
+				excelBO.GeraExcel();
+
+				if (excelBO != null && excelBO.workbook != null)
+				{
+					Status = "OK";
+					return excelBO.workbook;
+				}
+			}
+			catch (Exception e)
+			{
+				//result.AddMensagem("", $"Erro ao buscar {entidade}.", true);
+				//result.Status = "ERRO";
+				log.Error($"Erro ao buscar {entidade}.", e);
+			}
+            finally
+			{
+				logFim = DateTime.Now;
+				logResumo.Info($"Resumo:ExcelGenerico Início:{logInicio.ToString("yyyy/MM/dd HH:mm:ss.fff")} Fim:{logFim.ToString("yyyy/MM/dd HH:mm:ss.fff")} Tempo:{(logFim - logInicio).TotalMilliseconds} Result:{Status}");
+			}
+
+			return null;
+		}
+		#endregion
+
+		#region Construtor
+		/// <summary>
+		/// Construtor
+		/// </summary>
+
+		public Negocio[siglaAPI]BO_Base(IWritableOptions<AppSettings> options)
+		{
+			ultimaMensagem = new StringBuilder();
+			_options = options;
+			//Carrega Settings
+			_settings = _options?.Get("");
+		}
+		#endregion
+
+		#region ValidaUsuario
+		/// <summary>
+		/// Valida Usuario API - Importante Reescrever!
+		/// </summary>
+		/// <param name="usuario"></param>
+		/// <param name="senhamd5"></param>
+		/// <returns></returns>
+		public virtual Services.UsuarioAPI ValidaUsuario(string usuario, string senhamd5)
+		{
+			DateTime logInicio = DateTime.Now;
+			DateTime logFim;
+
+			logAtv.Info($"ValidaUsuario: Usuario:'{usuario}'");
+
+			Services.UsuarioAPI usrapi = new Services.UsuarioAPI { Id = 1, Username = "teste" };
+
+			logFim = DateTime.Now;
+			logResumo.Info($"Resumo:ValidaUsuario Início:{logInicio.ToString("yyyy/MM/dd HH:mm:ss.fff")} Fim:{logFim.ToString("yyyy/MM/dd HH:mm:ss.fff")} Tempo:{(logFim - logInicio).TotalMilliseconds} Result:{(usrapi!=null ? "OK" : "ERRO")}");
+
+			return usrapi;
+
+		}
+		#endregion ValidaUsuario
+		#region Log
+		private void RegistraLog(string textoLog)
+		{
+			string msg = string.Empty;
+
+			msg = $"{textoLog}.";
+
+			if (alerta == null)
+				alerta = new StringBuilder();
+
+			alerta.Append($"{msg}\n");
+			log.Info(msg);
+		}
+		#endregion
+		#region Valida BD
+		///<summary>
+		///Valida banco de dados - gera scripts em log interno
+		///</summary>
+		/// <returns></returns>
+
+		public GenericResult ValidaBD()
+		{
+
+			logAtv.Info($"ValidaBD:");
+
+			GenericResult result = new GenericResult();
+
+			#region Update/Valida Esquema
+
+			bool validaEsquema = true;
+			bool updateSchema = true;
+
+			#region Update Esquema
+			if (updateSchema)
+			{
+				try
+				{
+
+					NHibernateHelper.ExportaSchema(@"ScriptSQL_Create_[nomeAPI].sql");
+					StringBuilder sb = NHibernateHelper.UpdateSchema(@"ScriptSQL_Update_[nomeAPI].sql");
+					string[] sbs = sb.ToString().Split("\n; ");
+					if (sbs != null && sbs.Length > 0)
+					{
+						result.AddMensagem("", "Script SQL", false);
+						foreach (string str in sbs)
+							result.AddMensagem("", str, false);
+					}
+				}
+
+				catch (Exception e)
+				{
+					log.Error("Update Schema não realizado, provável falta de suporte.", e);
+					result.AddMensagem("", "Update Schema não realizado, provável falta de suporte.", true);
+				}
+			}
+			#endregion
+
+			#region Valida Esquema
+			if (validaEsquema)
+			{
+				NHibernate.Tool.hbm2ddl.SchemaValidator validator = new NHibernate.Tool.hbm2ddl.SchemaValidator(NHibernateHelper.configuration);
+				try
+				{
+					validator.Validate();
+					validator = null;
+				}
+				catch (NHibernate.SchemaValidationException ex)
+				{
+					int difVarchar = 0;
+					int difNumeric = 0;
+
+					if (ex.ValidationErrors != null)
+					{
+						bool msg = false;
+
+						foreach (string s in ex.ValidationErrors)
+						{
+							//Ignora os erros 19,5 e varchar/nvarchar e numeric/Decimal
+							if (!s.Contains("Expected DECIMAL(19, 5)"))
+							{
+								if (s.Contains("Found: varchar, Expected NVARCHAR"))
+								{
+									difVarchar++;
+									continue;
+								}
+
+								if (s.Contains("Found: numeric, Expected DECIMAL("))
+								{
+									difNumeric++;
+									continue;
+								}
+
+								if (!msg)
+								{
+									log.Error("Possíveis erros de validação Schema:");
+									msg = true;
+								}
+
+								log.Error(s);
+							}
+						}
+
+						msg = false;
+						foreach (string s in ex.ValidationErrors)
+						{
+
+							//Ignora os erros 19,5?
+							if (s.Contains("Expected DECIMAL(19, 5)"))
+							{
+								if (!msg)
+								{
+									log.Error("Possíveis erros de validação Schema - ID não declarado corretamente ?:");
+									msg = true;
+								}
+								log.Error(s);
+								result.AddMensagem("Validação Campos", s, true);
+							}
+						}
+					}
+				}
+				catch (Exception ex)
+				{
+					log.Error("Possui Erros de validação Schema:", ex);
+					result.AddMensagem("Validação Campos", "Possui Erros de validação Schema:", true);
+				}
+				finally
+				{
+					validator = null;
+				}
+			}
+			#endregion
+
+			#endregion
+			return result;
+		}
+		#endregion
+		#region ParametrosQry
+		/// <summary>
+		/// Converte parametros CAMPO,VALOR,TIPO em CAMPO,VALOR já com cast
+		/// </summary>
+		/// <param name="parametrosqry"></param>
+		/// <returns></returns>
+		public object[] ParametrosQry(string[] parametrosqry)
+		{
+			object[] parametros = new object[2 * (long)Math.Ceiling(parametrosqry?.Length / 3.0 ?? 0)];
+			for (int idx = 0; idx < (parametrosqry?.Length ?? 0); idx += 3)
+			{
+				parametros[(idx / 3)*2] = parametrosqry[idx];
+				string tipo = "string";
+				if (parametrosqry?.Length > (idx + 2))
+				{
+					tipo = parametrosqry[idx + 2] ?? "string";
+				}
+				if (parametrosqry?.Length > (idx + 1))
+				{
+					switch (tipo)
+					{
+						case "decimal":
+						case "numeric":
+							try
+							{
+								parametros[(idx / 3) * 2 + 1] = Convert.ToDecimal(parametrosqry[idx + 1]);
+							}
+							catch (Exception e)
+							{
+								parametros[(idx / 3) * 2 + 1] = 0m;
+								log.Error("Convert.ToDecimal(parametrosqry)", e);
+							}
+							break;
+						default:
+							parametros[(idx / 3) * 2 + 1] = parametrosqry[idx + 1];
+							break;
+					}
+				}
+				else parametros[(idx / 3) * 2 + 1] = null;
+			}
+			return parametros;
+		}
+		#endregion
+	}
+}

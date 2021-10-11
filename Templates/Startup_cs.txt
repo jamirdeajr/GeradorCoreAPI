@@ -1,0 +1,275 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Text;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.HttpsPolicy;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+
+using [nomeAPI].Services;
+using [nomeAPI].Helpers;
+using [nomeAPI].Negocio;
+using Nucleo_Geral_Core;
+
+namespace [nomeAPI]
+{
+    /// <summary>
+    /// Startup WebAPI
+    /// </summary>
+    public class Startup
+    {
+        private static readonly log4net.ILog log =
+            log4net.LogManager.GetLogger(typeof(Program));
+
+        /// <summary>
+        /// WebHostEnvironment
+        /// </summary>
+        public IWebHostEnvironment WebHostEnvironment { get; private set; }
+
+        /// <summary>
+        /// Configuration
+        /// </summary>
+        public IConfiguration Configuration { get; }
+
+        /// <summary>
+        /// Construtor Startup
+        /// </summary>
+        /// <param name="configuration"></param>
+        /// <param name="env"></param>
+        public Startup(IConfiguration configuration, IWebHostEnvironment env)
+        {
+            this.WebHostEnvironment = env;
+            this.Configuration = configuration;
+        }
+
+        /// <summary>
+        /// This method gets called by the runtime. Use this method to add services to the container.
+        /// </summary>
+        /// <param name="services"></param>
+        public void ConfigureServices(IServiceCollection services)
+        {
+            services.AddSingleton<IConfiguration>(Configuration);
+            services.AddCors();
+
+            services.AddControllers().AddNewtonsoftJson(options =>
+            {
+                var settings = options.SerializerSettings;
+
+                //Quando em produção retirar para economizar espaço - Indented
+                settings.Formatting = Newtonsoft.Json.Formatting.Indented;
+                settings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
+
+                //Não preserva referencias - não atendeu o solicitado
+                settings.PreserveReferencesHandling = Newtonsoft.Json.PreserveReferencesHandling.None;
+
+                //Não retorna nulos
+                settings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore;
+            });
+
+            #region Swagger
+            //Gerador de documentacao
+
+            var contact = new OpenApiContact()
+            {
+                Name = "QLA Sistemas",
+                Email = "qla@qla.com.br",
+                Url = new Uri("http://qla.com.br")
+            };
+
+            var license = new OpenApiLicense()
+            {
+                Name = "Licença QLA",
+                Url = new Uri("http://www.example.com")
+            };
+
+            var info1 = new OpenApiInfo
+            {
+                Title = Versao.titulo,
+                Version = $"v{Versao.versao}",
+                //TermsOfService = new Uri("http://www.example.com"),
+                Contact = contact,
+                //License = license
+            };
+
+            //Gerador de documentacao
+            services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", info1);
+                //c.SwaggerDoc("v2", info2);
+
+                // Define que BearerAuth é o schema em uso
+                /* Não ok
+                c.AddSecurityDefinition("bearerAuth", new OpenApiSecurityScheme()
+                {
+                    Description = "Header Autorização JWT usando schema Bearer. Exemplo: \"Authorization: Bearer {token}\"",
+                    Name = "Authorization",
+                    In = ParameterLocation.Header,
+                    Type = SecuritySchemeType.ApiKey
+                });
+                */
+                /* Alternativo, Bearer simplificado */
+                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme()
+                {
+                    Name = "Authorization",
+                    Type = SecuritySchemeType.ApiKey,
+                    Scheme = "Bearer",
+                    BearerFormat = "JWT",
+                    In = ParameterLocation.Header,
+                    Description = "Header Autorização JWT usando schema Bearer. Exemplo: \"Bearer {token}\"",
+                });
+                c.AddSecurityRequirement(new OpenApiSecurityRequirement
+                    {
+                        {
+                              new OpenApiSecurityScheme
+                              {
+                                  Reference = new OpenApiReference
+                                  {
+                                      Type = ReferenceType.SecurityScheme,
+                                      Id = "Bearer"
+                                  }
+                              },
+                             new string[] {}
+                        }
+                    });
+                
+
+
+                var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+                c.IncludeXmlComments(xmlPath);
+            });
+
+            #endregion
+
+            //Appsettings.json
+            services.AddOptions();
+            //Configura versão 'writable' das settings
+            services.ConfigureWritable<AppSettings>(Configuration.GetSection("AppSettings"));
+
+            // configure jwt authentication
+            //
+            AppSettings appSettings = Configuration.GetSection("AppSettings").Get<AppSettings>();// 
+
+            if (string.IsNullOrEmpty(appSettings.webapi_segredo))
+            {
+                //@ TODO substituir essa chave diretamente no appsettings
+                appSettings.webapi_segredo = "tem que usar uma chave bem grande para que funcione corretamente";
+            }
+
+            var key = Encoding.ASCII.GetBytes(appSettings.webapi_segredo);
+            services.AddAuthentication(x =>
+            {
+                x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(x =>
+            {
+                x.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = context =>
+                    {
+                        IUserService userService = context.HttpContext.RequestServices.GetRequiredService<IUserService>();
+                        int userId = int.Parse(context.Principal.Identity.Name);
+
+                        var identity = (System.Security.Claims.ClaimsIdentity)context.Principal.Identity;
+                        //string tipo = identity.Claims.FirstOrDefault(c => c.Type == "Tipo").Value;
+
+                        Task<UsuarioAPI> user = null;
+
+                        user = userService.GetByIdUsr(userId);
+
+                        if (user == null)
+                        {
+                            context.Fail("Unauthorized");
+                        }
+
+                        return Task.CompletedTask;
+                    }
+                };
+                x.RequireHttpsMetadata = false;
+                x.SaveToken = true;
+                x.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(key),
+                    ValidateIssuer = false,
+                    ValidateAudience = false
+                    
+                };
+            });
+            services.AddScoped<IUserService, UserService>();
+            services.AddScoped<INegocio[siglaAPI]BO, Negocio[siglaAPI]BO>();
+
+            services.AddSwaggerGenNewtonsoftSupport();
+        }
+
+
+        /// <summary>
+        /// This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+        /// </summary>
+        /// <param name="app"></param>
+        /// <param name="env"></param>
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        {
+            
+            
+            if (env.IsDevelopment())
+            {
+                log.Info("IsDevelopment");
+                app.UseDeveloperExceptionPage();
+            }
+            else
+            {
+                //log.Info("UseHsts");
+                app.UseHsts();
+                app.UseDeveloperExceptionPage();
+            }
+
+            //Comentado, senão irá forçar e redirecionar para https mesmo que parta de http
+            //app.UseHttpsRedirection();
+
+            app.UseRouting();
+            
+            app.UseCors(x => x
+               .AllowAnyOrigin()
+               .AllowAnyMethod()
+               .AllowAnyHeader());
+
+            app.UseAuthentication();
+            app.UseAuthorization();
+
+            //Gerador de documentacao
+            app.UseSwagger();
+            app.UseSwaggerUI(c =>
+            {
+
+#if DEBUG
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", $"{Versao.titulo} v{Versao.versao} {NHibernateHelper.GetDefaultSchema()}");
+#else
+                // To deploy on IIS
+                c.SwaggerEndpoint("/[nomeAPI]/swagger/v1/swagger.json", $"{Versao.titulo} v{Versao.versao}");
+#endif
+
+            });
+
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllers();
+            });
+        }
+    }
+}
+
